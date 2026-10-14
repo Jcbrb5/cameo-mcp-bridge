@@ -1,8 +1,9 @@
 #!/bin/bash
-# install.sh - Install the Cameo MCP Bridge
+# install.sh - Install the Cameo MCP Bridge (Git Bash / WSL / Linux).
+# On Windows, prefer install.ps1.
 set -euo pipefail
 
-CAMEO_HOME="${CAMEO_HOME:-D:/DevTools/CatiaMagic}"
+CAMEO_HOME="${CAMEO_HOME:-C:/Program Files/Magic Cyber Systems Engineer}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 find_python() {
@@ -19,8 +20,8 @@ find_python() {
     return 1
 }
 
-find_java17_home() {
-    for candidate in "${JDK17_HOME:-}" "${JAVA17_HOME:-}" "${JAVA_HOME:-}"; do
+find_java21_home() {
+    for candidate in "${JDK21_HOME:-}" "${JAVA21_HOME:-}" "${JDK17_HOME:-}" "${JAVA17_HOME:-}" "${JAVA_HOME:-}"; do
         if [ -n "${candidate:-}" ] && [ -x "$candidate/bin/java" ]; then
             echo "$candidate"
             return 0
@@ -58,13 +59,13 @@ echo ""
 # Build the Java plugin
 echo "Building Java plugin..."
 cd "$SCRIPT_DIR/plugin"
-if GRADLE_JAVA_HOME="$(find_java17_home)"; then
+if GRADLE_JAVA_HOME="$(find_java21_home)"; then
     echo "Using Java from: $GRADLE_JAVA_HOME"
     JAVA_HOME="$GRADLE_JAVA_HOME" PATH="$GRADLE_JAVA_HOME/bin:$PATH" \
-        ./gradlew -Dorg.gradle.java.home="$GRADLE_JAVA_HOME" assemblePlugin -PcameoHome="$CAMEO_HOME"
+        ./gradlew -Dorg.gradle.java.home="$GRADLE_JAVA_HOME" assemblePlugin -PcameoHome="$CAMEO_HOME" -PjdkHome="$GRADLE_JAVA_HOME"
 else
-    echo "Warning: no explicit Java 17 home detected via JDK17_HOME/JAVA17_HOME/JAVA_HOME."
-    echo "Gradle will use the current PATH/JAVA_HOME. If the build fails, set JDK17_HOME."
+    echo "Warning: no explicit Java 21 home detected via JDK21_HOME/JAVA21_HOME/JAVA_HOME."
+    echo "Gradle will use the current PATH/JAVA_HOME. If the build fails, set JDK21_HOME to a JDK 21 install."
     ./gradlew assemblePlugin -PcameoHome="$CAMEO_HOME"
 fi
 echo "Build complete."
