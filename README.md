@@ -1,5 +1,7 @@
 # Cameo MCP Bridge
 
+> **CATIA Magic 2026x / Windows fork.** This is a fork of [ajhcs/cameo-mcp-bridge](https://github.com/ajhcs/cameo-mcp-bridge) ported to CATIA Magic 2026x (Java 21), with a PowerShell installer for Windows. It targets 2026x only; for 2024x use the upstream repo. See [What this fork changes](#what-this-fork-changes).
+
 An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server that connects AI coding assistants to **CATIA Magic / Cameo Systems Modeler** -- the industry-standard MBSE tool for SysML and UML modeling.
 
 This lets Claude Code (or any MCP-compatible client) **query, create, modify, inspect, validate, and visualize** SysML/UML models inside a running Cameo instance through 162 tools covering capability negotiation, methodology-aware OOSEM workflows, semantic validation, state-machine semantics, elements, relationships, native matrices and tables, Relation Maps, reports, requirements import/export, validation suites, Teamwork/DataHub probes, diagrams, reusable verification, specifications, and guarded macro execution.
@@ -71,36 +73,62 @@ This is the only open-source MCP server that integrates directly with a running 
 
 All write operations are session-wrapped for undo/redo support. Read operations run on the HTTP thread pool (Cameo model reads are thread-safe).
 
+## What this fork changes
+
+- **CATIA Magic 2026x API port.** `plugin/src/com/claude/cameo/bridge/util/Cameo2026Compat.java` wraps APIs that changed in 2026x:
+  - `PresentationElement.getPropertyManager()` moved to `PropertyBasedPresentationElement`
+  - `DiagramPresentationElement.layout(boolean)` replaced by `DiagramLayouter`
+  - `isDiagramWindowOpen()` / `isDiagramWindowActive()` removed (approximated via the project's active diagram)
+- **Java 21 build.** The plugin compiles with `--release 21` against every jar in the Cameo `lib/` and `plugins/` folders.
+- **Windows installer.** `install.ps1` finds CATIA Magic and a JDK 21, builds and deploys the plugin, sets up the Python server, and registers it with Claude Code.
+- **Line endings.** `.gitattributes` keeps the repo LF and checks out `.ps1`/`.bat` as CRLF, so Windows clones stay clean.
+- `mcp` Python dependency pinned to `<2`.
+
 ## Prerequisites
 
-- **CATIA Magic / Cameo Systems Modeler** 2024x or newer (any bundle: Systems of Systems Architect, Cyber Systems Engineer, etc.)
-- **Java 17 JDK** available to Gradle
-- **Python 3.10+** with `pip`
-- **Gradle 8.x** (wrapper included)
+- **Windows 10/11** with **CATIA Magic / Cameo Systems Modeler 2026x** (any bundle: Systems of Systems Architect, Cyber Systems Engineer, etc.)
+- **JDK 21** (full JDK with `javac`, e.g. [Eclipse Temurin 21](https://adoptium.net/temurin/releases/?version=21)). The JRE bundled with CATIA Magic is not enough to compile.
+- **Python 3.10+** from [python.org](https://www.python.org/downloads/windows/) (tick "Add python.exe to PATH"), or the `py` launcher
+- **Git**
+- **Gradle 8.x** (wrapper included, no install needed)
+- Optional: **Claude Code** CLI, so the installer can register the MCP server
 
 ## Installation
 
-### Quick Install
+### Quick Install (Windows)
 
-```bash
-git clone https://github.com/ajhcs/cameo-mcp-bridge.git
+Close CATIA Magic first. Then, in PowerShell (use **Run as administrator** if CATIA Magic is under `C:\Program Files`):
+
+```powershell
+git clone https://github.com/Jcbrb5/cameo-mcp-bridge.git
 cd cameo-mcp-bridge
-
-# Set your Cameo install path (default: D:/DevTools/CatiaMagic)
-export CAMEO_HOME="/path/to/your/CatiaMagic"
-
-# Optional: point the installer/Gradle at a Java 17 JDK explicitly
-export JDK17_HOME="/path/to/jdk-17"
-
-./install.sh
+powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-The install script:
-1. Builds the Java plugin with Gradle and passes `CAMEO_HOME` through automatically
-2. Deploys it to `$CAMEO_HOME/plugins/com.claude.cameo.bridge/`
-3. Creates or reuses `mcp-server/.venv/` when not already inside a virtualenv
-4. Installs the Python MCP server into that environment
-5. Registers the MCP server with Claude Code when the `claude` CLI is available
+If auto-detection fails or you have several installs, pass the paths:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1 `
+    -CameoHome "C:\Program Files\Magic Cyber Systems Engineer" `
+    -JdkHome "C:\Program Files\Eclipse Adoptium\jdk-21.0.5.11-hotspot"
+```
+
+`install.ps1`:
+1. Finds CATIA Magic (a folder with `lib\md.jar` under `Program Files`, `C:\` or `D:\`) and a JDK 21 (`JDK21_HOME`, `JAVA_HOME`, then common vendor folders)
+2. Builds the plugin with `plugin\gradlew.bat clean assemblePlugin`
+3. Deploys it to `<CameoHome>\plugins\com.claude.cameo.bridge\`, removing older plugin jars
+4. Creates `mcp-server\.venv\` and installs the Python MCP server into it
+5. Registers the server with Claude Code as `cameo-bridge` when the `claude` CLI is on PATH
+
+Switches: `-SkipBuild`, `-SkipDeploy`, `-SkipPython`, `-SkipClaudeRegister`. Rerun the script after `git pull` to update.
+
+### Quick Install (Git Bash / WSL)
+
+```bash
+export CAMEO_HOME="C:/Program Files/Magic Cyber Systems Engineer"
+export JDK21_HOME="/path/to/jdk-21"
+./install.sh
+```
 
 ### Manual Install
 
@@ -108,10 +136,17 @@ The install script:
 
 ```bash
 cd plugin
-./gradlew assemblePlugin -PcameoHome="/path/to/CatiaMagic" -Pjdk17Home="/path/to/jdk-17"
+./gradlew assemblePlugin -PcameoHome="/path/to/CatiaMagic" -PjdkHome="/path/to/jdk-21"
 ```
 
-Gradle must run on a Java 17 JDK. You can also set `JDK17_HOME` or `JAVA17_HOME` instead of passing `-Pjdk17Home=...`.
+On Windows:
+
+```powershell
+cd plugin
+.\gradlew.bat assemblePlugin -PcameoHome="C:/Program Files/Magic Cyber Systems Engineer" -PjdkHome="C:/Program Files/Eclipse Adoptium/jdk-21.0.5.11-hotspot"
+```
+
+Gradle must run on a JDK 21. You can also set `JDK21_HOME` / `JAVA21_HOME` instead of passing `-PjdkHome=...` (`-Pjdk17Home` and `JDK17_HOME` still work as aliases). `CAMEO_HOME` is used when `-PcameoHome` is not given.
 
 **2. Deploy to Cameo:**
 
@@ -176,8 +211,9 @@ the low-level bridge.
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
 | `CAMEO_BRIDGE_PORT` | `18740` | HTTP port for the bridge (must match both sides) |
-| `JDK17_HOME` | unset | Optional Java 17 home used by `install.sh` and Gradle |
-| `JAVA17_HOME` | unset | Alternate Java 17 home override |
+| `CAMEO_HOME` | auto-detected (`install.ps1`) / `C:/Program Files/Magic Cyber Systems Engineer` (Gradle) | CATIA Magic install root |
+| `JDK21_HOME` | unset | JDK 21 home used by the installers and Gradle |
+| `JAVA21_HOME` | unset | Alternate JDK 21 home override |
 | `CAMEO_MCP_STRUCTURED_RESPONSES` | deprecated | Structured MCP object responses are now always used; this flag is kept only for backward compatibility with older docs |
 
 The Java plugin reads the port from system property `cameo.mcp.port` (default `18740`). To change it, add to your Cameo `*.vmoptions` file:
@@ -539,8 +575,8 @@ The bridge builds models correctly -- elements, relationships, directionality, s
 - **Session recovery edge case** -- if a macro crashes mid-transaction, `cameo_reset_session` may itself throw `TransactionAlreadyCommitedException`; in this case, saving and reopening the project is the most reliable recovery
 
 ### Compatibility
-- Tested with CATIA Magic Systems of Systems Architect 2024x
-- Should work with any Cameo Systems Modeler 2024x bundle (2024x+)
+- This fork targets CATIA Magic 2026x (Java 21) and has been run on CATIA Magic Cyber Systems Engineer 2026x on Windows
+- It does not build against 2024x; use [upstream](https://github.com/ajhcs/cameo-mcp-bridge) for 2024x
 - Requires Groovy script engine (bundled with Cameo) for macro execution
 - The Gradle build requires access to Cameo's `lib/` directory for compile-time dependencies
 

@@ -1,20 +1,20 @@
 # Build And Live Validation
 
-This repo is commonly used from Windows against a local CATIA Magic install at `D:\DevTools\CatiaMagic`.
+This fork targets CATIA Magic 2026x on Windows. Examples assume the install is at `C:\Program Files\Magic Cyber Systems Engineer` and a JDK 21 at `C:\Program Files\Eclipse Adoptium\jdk-21.0.5.11-hotspot`; adjust to your machine. For a one-shot build and deploy, run `install.ps1` from the repo root.
 
 ## Java Build
 
-From `Z:\cameo-mcp-bridge\plugin`:
+From the repo's `plugin` folder:
 
 ```powershell
-cmd.exe /c gradlew.bat test -PcameoHome=D:/DevTools/CatiaMagic -Pjdk17Home=D:/DevTools/jdk17/jdk-17.0.18+8
+cmd.exe /c gradlew.bat test -PcameoHome="C:/Program Files/Magic Cyber Systems Engineer" -PjdkHome="C:/Program Files/Eclipse Adoptium/jdk-21.0.5.11-hotspot"
 ```
 
-Use the explicit JDK 17 path. The machine default `java` may not be compatible with the plugin build.
+Use an explicit JDK 21 path. The machine default `java` may not be compatible with the plugin build.
 
 ## Python Tests
 
-From `Z:\cameo-mcp-bridge\mcp-server`:
+From the repo's `mcp-server` folder:
 
 ```powershell
 py -3 -m pytest tests\test_client.py tests\test_server.py
@@ -22,10 +22,10 @@ py -3 -m pytest tests\test_client.py tests\test_server.py
 
 ## Deploy
 
-From `Z:\cameo-mcp-bridge\plugin`:
+From the repo's `plugin` folder:
 
 ```powershell
-cmd.exe /c gradlew.bat deploy -PcameoHome=D:/DevTools/CatiaMagic -Pjdk17Home=D:/DevTools/jdk17/jdk-17.0.18+8
+cmd.exe /c gradlew.bat deploy -PcameoHome="C:/Program Files/Magic Cyber Systems Engineer" -PjdkHome="C:/Program Files/Eclipse Adoptium/jdk-21.0.5.11-hotspot"
 ```
 
 Restart CATIA Magic after deploying. Do not trust newly added endpoints until `/api/v1/status` and `/api/v1/capabilities` report the rebuilt plugin.
@@ -34,7 +34,7 @@ The deploy task removes stale `cameo-mcp-bridge-*.jar` files from the installed 
 
 ## Autopilot Route Surface Smoke Test
 
-After CATIA Magic is restarted and a project is open, from `Z:\cameo-mcp-bridge\mcp-server`:
+After CATIA Magic is restarted and a project is open, from the repo's `mcp-server` folder:
 
 ```powershell
 py -3 scripts\live_validate_autopilot_route_surface.py --base-url http://127.0.0.1:18740/api/v1 --timestamped --require-open-project

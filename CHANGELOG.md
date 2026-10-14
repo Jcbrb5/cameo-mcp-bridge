@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased - CATIA Magic 2026x / Windows fork
+
+Fork of upstream 2.3.5 targeting CATIA Magic 2026x on Windows.
+
+### Changed
+
+- Ported the plugin to CATIA Magic 2026x APIs through `Cameo2026Compat`: `getPropertyManager()` via `PropertyBasedPresentationElement`, diagram layout via `DiagramLayouter`, and diagram-window open/active checks via the project's active diagram
+- Build targets Java 21 and compiles against all jars in the Cameo `lib/` and `plugins/` folders
+- Gradle accepts `-PjdkHome`, `JDK21_HOME` and `JAVA21_HOME` (`jdk17Home`/`JDK17_HOME` kept as aliases) and honors `CAMEO_HOME`
+- Default Cameo install path is now `C:/Program Files/Magic Cyber Systems Engineer`; capability probes detect the running install root
+- Pinned the `mcp` Python dependency to `<2`
+
+### Added
+
+- `install.ps1` Windows installer with CATIA Magic and JDK 21 auto-detection
+- `.gitattributes` line-ending rules for clean Windows checkouts
+
 ## 2.3.5 - 2026-05-05
 
 Evidence-gathering release for native Relation Map debugging and UI-created settings inspection.
