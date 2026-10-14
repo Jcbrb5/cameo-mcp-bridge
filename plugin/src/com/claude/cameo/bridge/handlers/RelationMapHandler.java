@@ -2,6 +2,7 @@ package com.claude.cameo.bridge.handlers;
 
 import com.claude.cameo.bridge.HttpBridgeServer;
 import com.claude.cameo.bridge.util.EdtDispatcher;
+import com.claude.cameo.bridge.util.Cameo2026Compat;
 import com.claude.cameo.bridge.util.ElementSerializer;
 import com.claude.cameo.bridge.util.JsonHelper;
 import com.claude.cameo.bridge.util.PresentationSerializer;
@@ -415,7 +416,7 @@ public class RelationMapHandler implements HttpHandler {
                     }
                     if (layout != null && applied) {
                         new GraphSettings(diagram).setLayout(layout);
-                        dpe.layout(true);
+                        Cameo2026Compat.layout(dpe);
                     }
                     dpe.ensureLoaded();
                     int after = PresentationSerializer.flatten(dpe, null).size();
@@ -482,7 +483,7 @@ public class RelationMapHandler implements HttpHandler {
             if (layout != null) {
                 try {
                     new GraphSettings(diagram).setLayout(layout);
-                    dpe.layout(true);
+                    Cameo2026Compat.layout(dpe);
                 } catch (Exception e) {
                     warnings.add("Relation Map layout failed: " + describeException(e));
                 }
@@ -1074,9 +1075,9 @@ public class RelationMapHandler implements HttpHandler {
     private JsonObject relationMapDisplaySummary(DiagramPresentationElement dpe) {
         JsonObject summary = new JsonObject();
         try {
-            summary.addProperty("diagramWindowOpen", dpe.isDiagramWindowOpen());
-            summary.addProperty("diagramWindowActive", dpe.isDiagramWindowActive());
-            if (!dpe.isDiagramWindowOpen()) {
+            summary.addProperty("diagramWindowOpen", Cameo2026Compat.isDiagramWindowOpen(dpe));
+            summary.addProperty("diagramWindowActive", Cameo2026Compat.isDiagramWindowActive(dpe));
+            if (!Cameo2026Compat.isDiagramWindowOpen(dpe)) {
                 summary.addProperty("available", false);
                 summary.addProperty("reason", "Relation Map diagram window is not open");
                 return summary;
@@ -1123,7 +1124,7 @@ public class RelationMapHandler implements HttpHandler {
             return false;
         }
         try {
-            if (!dpe.isDiagramWindowOpen()) {
+            if (!Cameo2026Compat.isDiagramWindowOpen(dpe)) {
                 dpe.open();
             }
             Object display = getRelationMapDisplay(dpe);
