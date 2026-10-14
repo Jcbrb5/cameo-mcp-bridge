@@ -4,14 +4,19 @@ plugins {
 
 def cameoHome = project.hasProperty('cameoHome')
     ? project.property('cameoHome')
-    : 'D:/DevTools/CatiaMagic'
+    : (System.getenv('CAMEO_HOME') ?: 'C:/Program Files/Magic Cyber Systems Engineer')
 
-def jdk17Home = project.hasProperty('jdk17Home')
-    ? project.property('jdk17Home')
-    : (System.getenv('JDK17_HOME') ?: System.getenv('JAVA17_HOME'))
+// CATIA Magic 2026x runs on Java 21. jdk17Home/JDK17_HOME are still accepted
+// for backwards compatibility but must point at a JDK 21 install.
+def jdkHome = project.hasProperty('jdkHome')
+    ? project.property('jdkHome')
+    : (project.hasProperty('jdk17Home')
+        ? project.property('jdk17Home')
+        : (System.getenv('JDK21_HOME') ?: System.getenv('JAVA21_HOME')
+            ?: System.getenv('JDK17_HOME') ?: System.getenv('JAVA17_HOME')))
 
-sourceCompatibility = '17'
-targetCompatibility = '17'
+sourceCompatibility = '21'
+targetCompatibility = '21'
 
 sourceSets {
     main {
@@ -27,6 +32,10 @@ sourceSets {
 }
 
 dependencies {
+    // 2026x moved several API classes into new jars; compile against everything
+    // Cameo ships so the build doesn't depend on exact jar names.
+    compileOnly fileTree(dir: "${cameoHome}/lib", include: ['**/*.jar'])
+    compileOnly fileTree(dir: "${cameoHome}/plugins", include: ['**/*.jar'], exclude: ['com.claude.cameo.bridge/**'])
     compileOnly fileTree(dir: "${cameoHome}/lib", include: ['md.jar'])
     compileOnly fileTree(dir: "${cameoHome}/lib", include: ['md_api.jar'])
     compileOnly fileTree(dir: "${cameoHome}/lib", include: ['com.nomagic.magicdraw.uml2-*.jar'])
@@ -52,16 +61,17 @@ dependencies {
 
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs += ['-Xlint:-deprecation', '-Xlint:-unchecked']
-    if (jdk17Home) {
+    if (jdkHome) {
         options.fork = true
-        options.forkOptions.javaHome = file(jdk17Home)
+        options.forkOptions.javaHome = file(jdkHome)
     }
-    options.release = 17
+    options.release = 21
 }
 
 tasks.withType(Test).configureEach {
-    if (jdk17Home) {
-        executable = file("${jdk17Home}/bin/java.exe").absolutePath
+    if (jdkHome) {
+        def javaExe = file("${jdkHome}/bin/java.exe")
+        executable = (javaExe.exists() ? javaExe : file("${jdkHome}/bin/java")).absolutePath
     }
 }
 

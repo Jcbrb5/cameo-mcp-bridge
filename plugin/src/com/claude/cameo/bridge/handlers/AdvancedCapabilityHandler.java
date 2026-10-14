@@ -212,9 +212,27 @@ public class AdvancedCapabilityHandler implements HttpHandler {
             configured = System.getenv("CAMEO_HOME");
         }
         if (configured == null || configured.isEmpty()) {
-            configured = "D:/DevTools/CatiaMagic";
+            configured = detectRunningCameoHome();
+        }
+        if (configured == null || configured.isEmpty()) {
+            configured = "C:/Program Files/Magic Cyber Systems Engineer";
         }
         return configured;
+    }
+
+    /** Resolve the install root from the location of the jar that holds the Cameo Application class. */
+    private static String detectRunningCameoHome() {
+        try {
+            Class<?> app = Class.forName("com.nomagic.magicdraw.core.Application");
+            File jar = new File(app.getProtectionDomain().getCodeSource().getLocation().toURI());
+            File lib = jar.getParentFile();
+            if (lib != null && "lib".equalsIgnoreCase(lib.getName()) && lib.getParentFile() != null) {
+                return lib.getParentFile().getAbsolutePath();
+            }
+        } catch (Exception | LinkageError ignored) {
+            // Fall through to the default install path.
+        }
+        return null;
     }
 
     private static final class FeatureSpec {
